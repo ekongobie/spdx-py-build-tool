@@ -26,7 +26,8 @@ SKIP_DIRECTORIES = [
 
 # directories whose files should not be reported on and not scanned
 HIDE_DIRECTORIES = [
-    "spdx_id_doc_gen"
+    "LICENSES",
+    ".git"
 ]
 
 CODEBASE_EXTRA_PARAMS = {
@@ -44,14 +45,36 @@ CODEBASE_EXTRA_PARAMS = {
 
 FILES_TO_EXCLUDE = ["VERSION", "LICENSE"]
 
-def isPath(path_or_file):
-    return os.path.isdir(path_or_file)
+# TAG VALUE or RDF
+TAG_VALUE = "tv"
+RDF = "rdf"
 
 
-def isFile(path_or_file):
-    return os.path.isfile(path_or_file)
+def is_dir(path):
+    """
+    Returns True if the path is that of a directory; and False otherwise
+    """
+    return os.path.isdir(path)
 
-def shouldSkipFile(file_path, output_file):
+
+def is_file(path):
+    """
+    Returns True if the path is that of a file; and False otherwise
+    """
+    return os.path.isfile(path)
+
+
+def get_file_hash(file_path):
+    sha1sum = hashlib.sha1()
+    with open(file_path, 'rb') as source:
+      block = source.read(2**16)
+      while len(block) != 0:
+        sha1sum.update(block)
+        block = source.read(2**16)
+    return sha1sum.hexdigest()
+
+
+def should_skip_file(file_path, output_file):
     should_skip = False
     for item in FILES_TO_EXCLUDE:
         if item in file_path:
@@ -62,6 +85,14 @@ def shouldSkipFile(file_path, output_file):
 
 def get_codebase_extra_params(path_or_file):
     return CODEBASE_EXTRA_PARAMS
+
+
+def get_package_file(dir_or_file, file_name):
+    if is_dir(dir_or_file):
+        version_file_path = os.path.join(dir_or_file, file_name)
+        if os.path.exists(version_file_path):
+            return version_file_path
+    return None
 
 
 def get_package_version(path_or_file):
@@ -109,29 +140,26 @@ def get_virtual_env_dir():
 def get_python_version():
     return sys.version[:3]
 
-def get_venv_dep_dir():
-    return get_python_lib()
 
-def get_dependencies(reserved_python_names):
+def get_dependencies(args):
     """
     Get python dependencies from virtualenv.
     If they are not available(user uses another virtualenv), download them to temp folder.
     """
-    short_dep_list = os.listdir(get_venv_dep_dir())
-    dep_list = []
+    project_path  = args.project_path
+    reserved_python_names = args.res
+    short_dep_list = os.listdir(get_python_lib())
+    dep_list = [project_path]
     if not reserved_python_names:
         final_dep_list = []
         for item in short_dep_list:
             if not item.startswith("__") and not item.endswith("__"):
                 final_dep_list.append(item)
         for item in final_dep_list:
-            dep_list.append(os.path.join(get_venv_dep_dir(), item))
-        print("dep_list")
-        print(dep_list)
-        return dep_list
+            dep_list.append(os.path.join(get_python_lib(), item))
     else:
         for item in short_dep_list:
-            dep_list.append(os.path.join(get_venv_dep_dir(), item))
-        print("dep_list")
-        print(dep_list)
-        return dep_list
+            dep_list.append(os.path.join(get_python_lib(), item))
+    print("dep_list")
+    print(dep_list)
+    return dep_list

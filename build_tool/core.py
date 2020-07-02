@@ -2,24 +2,25 @@ import os
 from os.path import basename, dirname, isdir
 import hashlib, io
 from checksumdir import dirhash
-from .utils import get_codebase_extra_params, get_package_version, shouldSkipFile, isPath, isFile
+from .utils import get_codebase_extra_params, should_skip_file, get_package_version, is_dir, is_file, get_file_hash, TAG_VALUE, RDF
 from spdx.document import ExternalDocumentRef, Document, License, ExtractedLicense
 from spdx.checksum import Algorithm
 from spdx.utils import SPDXNone, NoAssert
 from spdx.version import Version
 from spdx.package import Package
 from spdx.creationinfo import Tool
+from spdx.file import File
 
 
 class SPDXFile(object):
     def __init__(self, path_or_file, output_file_name, id_scan_results, file_sum_info, doc_type):
-        self.is_file = isFile(path_or_file)
+        self.is_file = is_file(path_or_file)
         self.path_or_file = path_or_file
         self.file_to_scan = None
         if self.is_file:
             self.file_to_scan = path_or_file
             self.path_or_file = os.path.dirname(path_or_file)
-        self.output_file_name = output_file_name
+        self.output_file_name = output_file_name + "spdx"
         self.id_scan_results = id_scan_results
         self.doc_type = doc_type
         self.output_file = None
@@ -35,7 +36,7 @@ class SPDXFile(object):
         filelist = ""
         templist = []
         for item in self.id_scan_results:
-            if not shouldSkipFile(item["FileName"], self.output_file_name):
+            if not should_skip_file(item["FileName"], self.output_file_name):
                 templist.append(get_file_hash(item["FileName"]))
         # sort the sha  values
         templist.sort()
@@ -63,7 +64,7 @@ class SPDXFile(object):
         return sha1hash
 
     def get_output_file(self):
-        if isPath(self.path_or_file):
+        if is_dir(self.path_or_file):
             self.full_file_path = os.path.join(self.path_or_file, self.output_file_name + ".spdx")
             self.output_file = open(self.full_file_path, "wb+")
         else:
@@ -110,33 +111,48 @@ class SPDXFile(object):
 
     def create_spdx_document(self):
         """
-        Write identifier scan results as SPDX Tag/value or RDF or both.
+        Write identifier scan results as SPDX Tag/value or RDF.
         """
         self.get_output_file()
         self.spdx_document = Document(version=Version(2, 1),
                                  data_license=License.from_identifier(self.code_extra_params["lic_identifier"]))
         self.set_creation_info()
+        if isdir(self.path_or_file):
+            input_path = self.path_or_file
+        else:
+            input_path = dirname(self.path_or_file)
+
         package = self.spdx_document.package = Package(
             download_location=NoAssert(),
             version=self.get_package_version()
         )
         self.set_package_info(package)
-        ile_license_list = []
+        print("in -2")
+        print(len(self.id_scan_results))
+        all_files_have_no_license = True
+        all_files_have_no_copyright = True
+        file_license_list = []
         file_license_ids = []
-
-        if isPath(self.path_or_file):
+        # bar = Bar('Writing to spdx file', max=len(self.id_scan_results))
+        if is_dir(self.path_or_file):
+            print("in -1")
             for idx, file_data in enumerate(self.id_scan_results):
                 file_data_instance = open(file_data["FileName"], "r")
-                if not shouldSkipFile(file_data["FileName"], self.output_file_name):
+                # print("in 0")
+                if not should_skip_file(file_data["FileName"], self.output_file_name):
+                    print("in 1")
                     name = file_data["FileName"].replace(self.path_or_file, '.')
                     file_entry = File(
                         name=name,
                         chk_sum=Algorithm('SHA1', get_file_hash(file_data["FileName"]) or '')
                     )
                     spdx_license = None
+                    print("in 2")
                     if self.doc_type == TAG_VALUE:
+                        print("in 3")
                         spdx_license = License.from_identifier(file_data["SPDXID"])
                     else:
+                        print("in 4")
                         licenseref_id = 'SPDXID-Doc-Generator-' + file_data["SPDXID"]
                         file_license_ids.append(licenseref_id)
                         if licenseref_id in file_license_ids:
@@ -144,21 +160,27 @@ class SPDXFile(object):
                         spdx_license.name = NoAssert()
                         comment = "N/A"
                         spdx_license.comment = comment
+                        print("in 5")
                         text = NoAssert()
                         if not text:
                             text = comment
                         spdx_license.text = text
                         self.spdx_document.add_extr_lic(spdx_license)
                         package.add_lics_from_file(spdx_license)
+                        print("in 6")
+                    print("in 7")
                     file_entry.add_lics(spdx_license)
                     file_license_list.append(spdx_license)
                     file_entry.conc_lics = NoAssert()
                     file_entry.copyright = SPDXNone()
                     file_entry.spdx_id = self.code_extra_params["file_ref"].format(idx + 1)
                     package.add_file(file_entry)
+                    print("in 8")
+                # bar.next()
             if self.doc_type == TAG_VALUE:
                 for spdx_license in list(set(file_license_list)):
                     package.add_lics_from_file(spdx_license)
+        # bar.finish()
 
         if len(package.files) == 0:
             if self.doc_type == TAG_VALUE:

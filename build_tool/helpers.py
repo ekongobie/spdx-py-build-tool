@@ -2,7 +2,7 @@
 
 import logging
 import os
-from .utils import IGNORE_FILENAMES, SKIP_EXTENSIONS, SKIP_DIRECTORIES, HIDE_DIRECTORIES
+from .utils import IGNORE_FILENAMES, SKIP_EXTENSIONS, SKIP_DIRECTORIES, HIDE_DIRECTORIES, SKIP_EXTENSIONS
 
 class ScanData(object):
     def __init__(self):
@@ -16,7 +16,7 @@ class ScanData(object):
         return self.license
 
 
-def getListOfAllFilesInPath(dirName):
+def get_list_of_all_files_in_all_deps(dirName):
     """Returns a list of all paths for all files within topDir or its children."""
     # create a list of file and sub directories
     # names in the given directory
@@ -35,23 +35,23 @@ def getListOfAllFilesInPath(dirName):
                 allFiles.append(fullPath)
 
     return allFiles
-    
 
-def skipDirectory(dir_list, filePath):
+
+def skip_directory(dir_list, filePath):
     for d in dir_list:
         sd = f"/{d}/"
         if sd in filePath:
             return (True, "skipped directory")
 
 
-def shouldSkipFile(filePath, glob_to_skip):
+def should_skip_file(filePath, glob_to_skip):
     """Returns (True, "reason") if file should be skipped for scanning, (False, "") otherwise."""
     for item in glob_to_skip:
         if item.startswith('./') and item.endswith('/'):
             # if item is a directory
             dir_name1 = item.replace(item[:2], '')
             dir_name = dir_name1[:-1]
-            mk = skipDirectory([dir_name], filePath)
+            mk = skip_directory([dir_name], filePath)
             if mk != None:
                 return mk
         elif item.startswith('./') and not item.endswith('/'):
@@ -63,11 +63,40 @@ def shouldSkipFile(filePath, glob_to_skip):
     _, extension = os.path.splitext(filePath)
     if extension in SKIP_EXTENSIONS:
         return (True, "skipped file extension")
-    skipDirectory(SKIP_DIRECTORIES, filePath)
+    skip_directory(SKIP_DIRECTORIES, filePath)
     return (False, "")
 
+
+def get_dependencies_file_paths(dep_path_list):
+    """
+    Return a list of path strings for all the installed python package files
+    given a dep_path_list list of directories path of installed python packages
+    """
+    dep_path_list1 = ['/home/philip/Desktop/tests/bitbake']
+    dep_file_list = [] # installed_files
+    for item in dep_path_list:
+        if os.path.isfile(item):
+            dep_file_list.append(item)
+        else:
+            for (currentDir, _, filenames) in os.walk(item):
+                for item in HIDE_DIRECTORIES:
+                    if item in currentDir:
+                        continue #Clear
+                    else:
+                        for filename in filenames:
+                            filebasename, file_extension = os.path.splitext(filename)
+                            if filename not in IGNORE_FILENAMES and file_extension not in SKIP_EXTENSIONS:
+                                p = os.path.join(currentDir, filename) #current_dir
+                                dep_file_list.append(p)
+    print("Files count")
+    print(len(dep_file_list))
+    return dep_file_list
+
+
 def parseLineForIdentifier(line):
-    """Return parsed SPDX expression if tag found in line, or None otherwise."""
+    """
+    Return parsed SPDX expression if tag found in line, or None otherwise.
+    """
     p = line.partition("SPDX-License-Identifier:")
     if p[2] == "":
         return None
@@ -77,7 +106,7 @@ def parseLineForIdentifier(line):
     identifier = identifier.strip()
     return identifier
 
-def getIdentifierData(filePath, glob_to_skip, numLines=20):
+def get_identifier_data(filePath, glob_to_skip, numLines=20):
     """
     Scans the specified file for the first SPDX-License-Identifier:
     tag in the file.
@@ -93,7 +122,7 @@ def getIdentifierData(filePath, glob_to_skip, numLines=20):
     # FIXME probably needs to be within a try block
     sd = ScanData()
     sd.filename = filePath
-    (shouldSkip, reason) = shouldSkipFile(filePath, glob_to_skip)
+    (shouldSkip, reason) = should_skip_file(filePath, glob_to_skip)
     if shouldSkip:
         logging.debug(f"===> Skipping {filePath}")
         sd.scanned = False
@@ -155,7 +184,7 @@ def getIdentifierData(filePath, glob_to_skip, numLines=20):
         "FileChecksum": None
     }
 
-def getIdentifierForPaths(paths, glob_to_skip, numLines=20):
+def get_identifiers_for_paths(paths, glob_to_skip, numLines=20):
     """
     Scans all specified files for the first SPDX-License-Identifier:
     tag in each file.
@@ -177,7 +206,7 @@ def getIdentifierForPaths(paths, glob_to_skip, numLines=20):
     }
     results = []
     for filePath in paths:
-        id_data = getIdentifierData(filePath, glob_to_skip, numLines)
+        id_data = get_identifier_data(filePath, glob_to_skip, numLines)
         if id_data["SPDXID"] == "SKIPPED":
             scan_metrics["skipped"] = scan_metrics["skipped"] + 1
         if id_data["SPDXID"] == "NOASSERTION":
