@@ -1,1 +1,0 @@
--e git+https://github.com/spdx/tools-python.git@276e30d5ddeae98e4cefb455b4d245506e6345b1#egg=spdx-tools

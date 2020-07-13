@@ -1,47 +1,31 @@
-import os, sys
+import os, sys, logging
 import hashlib
 from distutils.sysconfig import get_python_lib
 
 # filenames to ignore altogether, and not include in reports
-IGNORE_FILENAMES = [
-    ".DS_Store",
-]
+IGNORE_FILENAMES = [".DS_Store", "INSTALLER"]
 
 # extensions to report on, but skip scanning
-SKIP_EXTENSIONS = [
-    ".gif",
-    ".png",
-    ".jpg",
-    ".PNG",
-    ".pdf",
-    ".der",
-    ".bin"
-]
+SKIP_EXTENSIONS = [".gif", ".png", ".jpg", ".PNG", ".pdf", ".der", ".bin"]
 
 # directories whose files should be reported on, but skip scanning
-SKIP_DIRECTORIES = [
-    "LICENSES",
-    ".git"
-]
+SKIP_DIRECTORIES = ["LICENSES", ".git"]
 
 # directories whose files should not be reported on and not scanned
-HIDE_DIRECTORIES = [
-    "LICENSES",
-    ".git"
-]
+HIDE_DIRECTORIES = ["LICENSES", ".git"]
 
 CODEBASE_EXTRA_PARAMS = {
-                        "header": "",
-                        "tool_name": "Python SPDX Build tool generator",
-                        "tool_name_rdf": "SPDX.Doc.Generator",
-                        "tool_version": "1.0",
-                        "notice": "SPDX Doc Generator",
-                        "creator_comment": "Created by SPDX Build tool generator",
-                        "ext_doc_ref": "SPDX-DOC-GENERATOR",
-                        "doc_ref": "SPDXRef-DOCUMENT",
-                        "file_ref": "SPDXRef-{0}",
-                        "lic_identifier": "CC0-1.0"
-                        }
+    "header": "",
+    "tool_name": "Python SPDX Build tool generator",
+    "tool_name_rdf": "SPDX.Doc.Generator",
+    "tool_version": "1.0",
+    "notice": "SPDX Doc Generator",
+    "creator_comment": "Created by SPDX Build tool generator",
+    "ext_doc_ref": "SPDX-DOC-GENERATOR",
+    "doc_ref": "SPDXRef-DOCUMENT",
+    "file_ref": "SPDXRef-{0}",
+    "lic_identifier": "CC0-1.0",
+}
 
 FILES_TO_EXCLUDE = ["VERSION", "LICENSE"]
 
@@ -66,11 +50,11 @@ def is_file(path):
 
 def get_file_hash(file_path):
     sha1sum = hashlib.sha1()
-    with open(file_path, 'rb') as source:
-      block = source.read(2**16)
-      while len(block) != 0:
-        sha1sum.update(block)
-        block = source.read(2**16)
+    with open(file_path, "rb") as source:
+        block = source.read(2 ** 16)
+        while len(block) != 0:
+            sha1sum.update(block)
+            block = source.read(2 ** 16)
     return sha1sum.hexdigest()
 
 
@@ -82,6 +66,7 @@ def should_skip_file(file_path, output_file):
     if output_file in file_path:
         should_skip = True
     return should_skip
+
 
 def get_codebase_extra_params(path_or_file):
     return CODEBASE_EXTRA_PARAMS
@@ -107,16 +92,20 @@ def get_package_version(path_or_file):
             if "VERSION_MINOR" in line:
                 version_minor = line.split("=")[1]
         if version_major and version_minor:
-            return "{0}.{1}".format(version_major.strip(" ").strip("\n"), version_minor.strip(" ").strip("\n"))
+            return "{0}.{1}".format(
+                version_major.strip(" ").strip("\n"),
+                version_minor.strip(" ").strip("\n"),
+            )
     return None
+
 
 def get_file_hash(file_path):
     sha1sum = hashlib.sha1()
-    with open(file_path, 'rb') as source:
-      block = source.read(2**16)
-      while len(block) != 0:
-        sha1sum.update(block)
-        block = source.read(2**16)
+    with open(file_path, "rb") as source:
+        block = source.read(2 ** 16)
+        while len(block) != 0:
+            sha1sum.update(block)
+            block = source.read(2 ** 16)
     return sha1sum.hexdigest()
 
 
@@ -134,8 +123,9 @@ def read(filename):
 
 def get_virtual_env_dir():
     if "VIRTUAL_ENV" in os.environ:
-        return os.environ['VIRTUAL_ENV']
+        return os.environ["VIRTUAL_ENV"]
     return None
+
 
 def get_python_version():
     return sys.version[:3]
@@ -146,7 +136,9 @@ def get_dependencies(args):
     Get python dependencies from virtualenv.
     If they are not available(user uses another virtualenv), download them to temp folder.
     """
-    project_path  = args.project_path
+    logging.basicConfig(level=logging.INFO)
+    logging.info("Getting dependencies")
+    project_path = os.path.expanduser(args.project_path)
     reserved_python_names = args.res
     short_dep_list = os.listdir(get_python_lib())
     dep_list = [project_path]
@@ -160,6 +152,4 @@ def get_dependencies(args):
     else:
         for item in short_dep_list:
             dep_list.append(os.path.join(get_python_lib(), item))
-    print("dep_list")
-    print(dep_list)
     return dep_list

@@ -2,7 +2,14 @@
 
 import logging
 import os
-from .utils import IGNORE_FILENAMES, SKIP_EXTENSIONS, SKIP_DIRECTORIES, HIDE_DIRECTORIES, SKIP_EXTENSIONS
+from .utils import (
+    IGNORE_FILENAMES,
+    SKIP_EXTENSIONS,
+    SKIP_DIRECTORIES,
+    HIDE_DIRECTORIES,
+    SKIP_EXTENSIONS,
+)
+
 
 class ScanData(object):
     def __init__(self):
@@ -47,15 +54,15 @@ def skip_directory(dir_list, filePath):
 def should_skip_file(filePath, glob_to_skip):
     """Returns (True, "reason") if file should be skipped for scanning, (False, "") otherwise."""
     for item in glob_to_skip:
-        if item.startswith('./') and item.endswith('/'):
+        if item.startswith("./") and item.endswith("/"):
             # if item is a directory
-            dir_name1 = item.replace(item[:2], '')
+            dir_name1 = item.replace(item[:2], "")
             dir_name = dir_name1[:-1]
             mk = skip_directory([dir_name], filePath)
             if mk != None:
                 return mk
-        elif item.startswith('./') and not item.endswith('/'):
-            file_name = item.replace(item[:1], '')
+        elif item.startswith("./") and not item.endswith("/"):
+            file_name = item.replace(item[:1], "")
             if item in filePath:
                 return (True, "skipped file name")
         elif item in filePath:
@@ -72,8 +79,10 @@ def get_dependencies_file_paths(dep_path_list):
     Return a list of path strings for all the installed python package files
     given a dep_path_list list of directories path of installed python packages
     """
-    dep_path_list1 = ['/home/philip/Desktop/tests/bitbake']
-    dep_file_list = [] # installed_files
+    logging.basicConfig(level=logging.INFO)
+    logging.info("Getting dependencies file paths")
+    dep_path_list1 = ["/home/philip/Desktop/tests/bitbake"]
+    dep_file_list = []  # installed_files
     for item in dep_path_list:
         if os.path.isfile(item):
             dep_file_list.append(item)
@@ -81,15 +90,16 @@ def get_dependencies_file_paths(dep_path_list):
             for (currentDir, _, filenames) in os.walk(item):
                 for item in HIDE_DIRECTORIES:
                     if item in currentDir:
-                        continue #Clear
+                        continue  # Clear
                     else:
                         for filename in filenames:
                             filebasename, file_extension = os.path.splitext(filename)
-                            if filename not in IGNORE_FILENAMES and file_extension not in SKIP_EXTENSIONS:
-                                p = os.path.join(currentDir, filename) #current_dir
+                            if (
+                                filename not in IGNORE_FILENAMES
+                                and file_extension not in SKIP_EXTENSIONS
+                            ):
+                                p = os.path.join(currentDir, filename)  # current_dir
                                 dep_file_list.append(p)
-    print("Files count")
-    print(len(dep_file_list))
     return dep_file_list
 
 
@@ -105,6 +115,7 @@ def parseLineForIdentifier(line):
     identifier = identifier.rstrip("/*")
     identifier = identifier.strip()
     return identifier
+
 
 def get_identifier_data(filePath, glob_to_skip, numLines=20):
     """
@@ -134,7 +145,7 @@ def get_identifier_data(filePath, glob_to_skip, numLines=20):
             "SPDXID": sd.license,
             "scanned": sd.scanned,
             "FileType": None,
-            "FileChecksum": None
+            "FileChecksum": None,
         }
 
     # if we get here, we will scan the file
@@ -156,10 +167,9 @@ def get_identifier_data(filePath, glob_to_skip, numLines=20):
                         "SPDXID": sd.license,
                         "scanned": sd.scanned,
                         "FileType": None,
-                        "FileChecksum": None
+                        "FileChecksum": None,
                     }
         except UnicodeDecodeError:
-            # print(f"Encountered invalid UTF-8 content for {filePath}")
             # invalid UTF-8 content
             sd.scanned = False
             sd.skipReason = "encountered invalid UTF-8 content"
@@ -170,7 +180,7 @@ def get_identifier_data(filePath, glob_to_skip, numLines=20):
                 "SPDXID": sd.license,
                 "scanned": sd.scanned,
                 "FileType": None,
-                "FileChecksum": None
+                "FileChecksum": None,
             }
 
     # if we get here, we didn't find an identifier
@@ -181,8 +191,9 @@ def get_identifier_data(filePath, glob_to_skip, numLines=20):
         "SPDXID": "NOASSERTION",
         "scanned": sd.scanned,
         "FileType": None,
-        "FileChecksum": None
+        "FileChecksum": None,
     }
+
 
 def get_identifiers_for_paths(paths, glob_to_skip, numLines=20):
     """
@@ -198,12 +209,9 @@ def get_identifiers_for_paths(paths, glob_to_skip, numLines=20):
              ScanData is (parsed identifier, line number) if found;
                          (None, -1) if not found.
     """
-    scan_metrics = {
-    "with_id": 0,
-    "without_id": 0,
-    "skipped": 0,
-    "total": len(paths)
-    }
+    logging.basicConfig(level=logging.INFO)
+    logging.info("Getting identifiers for paths")
+    scan_metrics = {"with_id": 0, "without_id": 0, "skipped": 0, "total": len(paths)}
     results = []
     for filePath in paths:
         id_data = get_identifier_data(filePath, glob_to_skip, numLines)
@@ -215,7 +223,6 @@ def get_identifiers_for_paths(paths, glob_to_skip, numLines=20):
             scan_metrics["with_id"] = scan_metrics["with_id"] + 1
 
         results.append(id_data)
-    print("Files info: {0}".format(scan_metrics))
     return results
 
 
@@ -224,16 +231,20 @@ def get_complete_time(function, args=tuple(), kwargs={}):
     ----Decorator----
     Get real, user and system time
     """
+
     def wrappedMethod(*args, **kwargs):
         from time import time as timestamp
         from resource import getrusage as resource_usage, RUSAGE_SELF
+
         start_time, start_resources = timestamp(), resource_usage(RUSAGE_SELF)
         func = function(*args, **kwargs)
         end_resources, end_time = resource_usage(RUSAGE_SELF), timestamp()
-        results = {'real': end_time - start_time,
-                   'sys': end_resources.ru_stime - start_resources.ru_stime,
-                   'user': end_resources.ru_utime - start_resources.ru_utime}
-        print("Execution time for {0}".format(function.__name__))
-        print(results)
+        results = {
+            "real": end_time - start_time,
+            "sys": end_resources.ru_stime - start_resources.ru_stime,
+            "user": end_resources.ru_utime - start_resources.ru_utime,
+        }
+        # print("Execution time for {0}".format(function.__name__))
         return func
+
     return wrappedMethod
