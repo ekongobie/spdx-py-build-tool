@@ -11,6 +11,7 @@ from .utils import (
     get_file_hash,
     TAG_VALUE,
     RDF,
+    FILE_SUFFIX,
 )
 from spdx.document import ExternalDocumentRef, Document, License, ExtractedLicense
 from spdx.checksum import Algorithm
@@ -31,7 +32,7 @@ class SPDXFile(object):
         if self.is_file:
             self.file_to_scan = path_or_file
             self.path_or_file = os.path.dirname(path_or_file)
-        self.output_file_name = output_file_name + "spdx"
+        self.output_file_name = output_file_name + FILE_SUFFIX
         self.id_scan_results = id_scan_results
         self.doc_type = doc_type
         self.output_file = None

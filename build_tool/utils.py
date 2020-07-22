@@ -14,6 +14,9 @@ SKIP_DIRECTORIES = ["LICENSES", ".git"]
 # directories whose files should not be reported on and not scanned
 HIDE_DIRECTORIES = ["LICENSES", ".git"]
 
+# Suffix used to guarantee uniqueness of spdx filename
+FILE_SUFFIX = "spdx"
+
 CODEBASE_EXTRA_PARAMS = {
     "header": "",
     "tool_name": "Python SPDX Build tool generator",
