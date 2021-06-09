@@ -23,7 +23,7 @@ setup_dict = dict(
     install_requires=[
         "checksumdir==1.2.0",
         "isodate==0.6.0",
-        "pip==9.0.1",
+        "pip==19.2",
         "pkg-resources==0.0.0",
         "ply==3.11",
         "pyparsing==2.4.7",
