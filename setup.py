@@ -28,7 +28,7 @@ setup_dict = dict(
         "ply==3.11",
         "pyparsing==2.4.7",
         "rdflib==5.0.0",
-        "setuptools==39.0.1",
+        "setuptools==65.5.1",
         "six==1.15.0",
         "spdx-tools",
         "pytest",
